@@ -47,7 +47,7 @@ public partial class Home:Window
         var tables=catalog.Songs.SelectMany(s=>s.Tables).Select(t=>t.Table).Distinct().Order().ToList();tables.Insert(0,"전체 카탈로그");
         TableBox.ItemsSource=tables;TableBox.SelectedItem=tables.Contains(settings.Table)?settings.Table:tables[0];
         ready=true;await RefreshInstalled();cleanupTimer.Start();
-        Status.Text="준비 완료 · 곡을 다운로드한 뒤 OpenLR2 선곡 화면에서 F8을 누르세요.";
+        Status.Text="준비 완료 · 다운로드 후 게임의 곡 목록을 갱신하세요. OpenLR2는 선곡 화면에서 F8.";
     }
     private async Task RefreshInstalled()
     {
@@ -72,17 +72,17 @@ public partial class Home:Window
     private void SearchChanged(object sender,TextChangedEventArgs e){searchTimer.Stop();searchTimer.Start();}
     private void FilterChanged(object sender,RoutedEventArgs e)=>RefreshList();
     private void SongChanged(object sender,SelectionChangedEventArgs e){SelectedTitle.Text=Songs.SelectedItems.Count>1?$"{Songs.SelectedItems.Count}개 채보 선택":(Songs.SelectedItem as SongRow)?.Title??"목록에서 곡을 선택하세요.";UpdateControls();}
-    private void CopyFolder(object sender,RoutedEventArgs e){Clipboard.SetText(SongsRoot);Status.Text="난이도표 폴더 경로를 복사했습니다. 이전 songs/list 경로 대신 이 경로만 OpenLR2에 등록하세요.";}
+    private void CopyFolder(object sender,RoutedEventArgs e){Clipboard.SetText(SongsRoot);Status.Text="난이도표 폴더 경로를 복사했습니다. 이전 songs/list 경로 대신 이 경로만 사용하는 구동기에 등록하세요.";}
     private void OpenManagedFolder(object sender,RoutedEventArgs e){Directory.CreateDirectory(SongsRoot);Process.Start(new ProcessStartInfo("explorer.exe",SongsRoot){UseShellExecute=true});}
     private async void RefreshLibrary(object sender,RoutedEventArgs e)
-    {await Run(async()=>{await RefreshInstalled();Status.Text="설치 상태를 갱신했습니다. 게임의 곡 목록은 OpenLR2에서 F8로 갱신하세요.";});}
+    {await Run(async()=>{await RefreshInstalled();Status.Text="설치 상태를 갱신했습니다. 게임에서도 곡 목록을 갱신하세요. OpenLR2는 선곡 화면에서 F8.";});}
     private async void OrganizeLibrary(object sender,RoutedEventArgs e)
     {
-        if(GameRunning()){Status.Text="기존 폴더를 재구성하려면 OpenLR2를 종료하세요. 새 곡 다운로드는 게임 중에도 가능합니다.";return;}
+        if(GameRunning()){Status.Text="기존 폴더를 재구성하려면 게임을 종료하세요. 새 곡 다운로드는 게임 중에도 가능합니다.";return;}
         await Run(async()=>
         {
             var count=await library!.OrganizeFolders(catalog!.Songs,lifetime.Token);
-            Status.Text=$"{count}개 채보를 난이도표·레벨 폴더로 정리했습니다. 새 관리 경로를 OpenLR2에 등록하세요.";
+            Status.Text=$"{count}개 채보를 난이도표·레벨 폴더로 정리했습니다. 새 관리 경로를 사용하는 구동기에 등록하세요.";
         });
     }
     private async void DownloadSong(object sender,RoutedEventArgs e)
@@ -112,7 +112,7 @@ public partial class Home:Window
                 }
                 await RefreshInstalled();
                 var pending=selected.Count-completed-failures.Count;
-                Status.Text=$"{(cancelled?"취소됨":"처리 완료")} · 완료 {completed} / 실패 {failures.Count} / 미처리 {pending} · OpenLR2 선곡 화면에서 F8로 갱신하세요.";
+                Status.Text=$"{(cancelled?"취소됨":"처리 완료")} · 완료 {completed} / 실패 {failures.Count} / 미처리 {pending} · 게임 목록을 갱신하세요. OpenLR2는 선곡 화면에서 F8.";
                 if(failures.Count>0)
                 {
                     Error.Text=string.Join("\n\n",failures);ErrorPanel.Visibility=Visibility.Visible;

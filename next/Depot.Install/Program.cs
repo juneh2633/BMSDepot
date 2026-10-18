@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text;
@@ -30,7 +30,7 @@ static class Program
 sealed class Installer:Form
 {
     private readonly Button install=new(){Text="설치하고 시작",Width=400,Height=52};
-    private readonly Label status=new(){Text="Depot에서 다운로드하고, 일반 OpenLR2에서 F8로 곡 목록을 갱신합니다.",Width=440,Height=60};
+    private readonly Label status=new(){Text="Depot에서 다운로드하고, LR2·OpenLR2에서 곡 목록을 갱신합니다.",Width=440,Height=60};
     public Installer()
     {
         Text="BMS Depot 새 버전 설치";ClientSize=new Size(500,260);StartPosition=FormStartPosition.CenterScreen;MaximizeBox=false;FormBorderStyle=FormBorderStyle.FixedDialog;

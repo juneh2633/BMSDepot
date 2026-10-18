@@ -8,12 +8,16 @@ Depot에서 다운로드한 뒤 사용하는 구동기에서 곡 목록을 다�
 
 ## 설치
 
-[Releases](https://github.com/juneh2633/BMSDepot/releases)에서 설치 파일이나 포터블 ZIP을 받습니다. 아직 릴리스가 없다면 배포 준비 중입니다.
+[0.1.0-alpha.1 릴리스](https://github.com/juneh2633/BMSDepot/releases/tag/v0.1.0-alpha.1)에서 받습니다.
+
+- [Windows 설치 파일](https://github.com/juneh2633/BMSDepot/releases/download/v0.1.0-alpha.1/BMSDepot-0.1.0-alpha.1-win-x64-setup.exe)
+- [포터블 ZIP](https://github.com/juneh2633/BMSDepot/releases/download/v0.1.0-alpha.1/BMSDepot-0.1.0-alpha.1-win-x64.zip)
+- [SHA256 목록](https://github.com/juneh2633/BMSDepot/releases/download/v0.1.0-alpha.1/SHA256SUMS.txt)
 
 - **`*-setup.exe`**: 실행 후 **설치하고 시작**
 - **`*-win-x64.zip`**: 압축을 풀고 `BMSDepotNext.exe` 실행
 
-Windows x64용입니다. .NET 런타임은 포함되어 있습니다. 포터블 ZIP은 실행 파일만 꺼내지 말고 `catalog.json`과 나머지 파일을 같은 폴더에 두세요. LR2 등 BMS 구동기와 원곡 파일은 별도로 필요합니다.
+Windows x64용입니다. **사용자는 .NET SDK나 런타임을 따로 설치할 필요가 없습니다.** `catalog.json`도 포함되어 있습니다. 포터블 ZIP은 실행 파일만 꺼내지 말고 나머지 파일을 같은 폴더에 두세요. LR2 등 BMS 구동기는 별도로 준비합니다. 곡은 Depot에서 다운로드합니다.
 
 ## 처음 사용할 때
 

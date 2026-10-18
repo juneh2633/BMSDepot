@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net9.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>BMSDepotNext</AssemblyName></PropertyGroup>
+ <ItemGroup><ProjectReference Include="../Depot.Engine/Depot.Engine.csproj"/>
+ <Content Include="../catalog.json" Link="catalog.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/></ItemGroup>
+</Project>

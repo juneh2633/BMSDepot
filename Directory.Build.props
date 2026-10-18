@@ -1,0 +1,7 @@
+<Project>
+ <PropertyGroup>
+  <Version>0.1.0-alpha.1</Version>
+  <RuntimeFrameworkVersion>9.0.20</RuntimeFrameworkVersion>
+  <Deterministic>true</Deterministic>
+ </PropertyGroup>
+</Project>

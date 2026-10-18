@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><TargetFramework>net9.0-windows</TargetFramework><OutputType>WinExe</OutputType><UseWindowsForms>true</UseWindowsForms><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>BMSDepotNext-Setup</AssemblyName></PropertyGroup>
+ <ItemGroup><EmbeddedResource Include="../package.zip" LogicalName="package.zip"/></ItemGroup>
+</Project>

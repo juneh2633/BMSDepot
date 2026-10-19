@@ -30,10 +30,10 @@ static class Program
 sealed class Installer:Form
 {
     private readonly Button install=new(){Text="설치하고 시작",Width=400,Height=52};
-    private readonly Label status=new(){Text="Depot에서 다운로드하고, LR2·OpenLR2에서 곡 목록을 갱신합니다.",Width=440,Height=60};
+    private readonly Label status=new(){Text="BMS 곡을 찾아 받고, 게임에서 플레이하세요.\n설치 후 처음 사용 안내가 열립니다.",Width=440,Height=60};
     public Installer()
     {
-        Text="BMS Depot 새 버전 설치";ClientSize=new Size(500,260);StartPosition=FormStartPosition.CenterScreen;MaximizeBox=false;FormBorderStyle=FormBorderStyle.FixedDialog;
+        Text="BMS Depot 설치";ClientSize=new Size(500,260);StartPosition=FormStartPosition.CenterScreen;MaximizeBox=false;FormBorderStyle=FormBorderStyle.FixedDialog;
         var panel=new FlowLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(26),FlowDirection=FlowDirection.TopDown,WrapContents=false};
         panel.Controls.Add(new Label{Text="BMS Depot",AutoSize=true,Font=new Font(Font.FontFamily,24,FontStyle.Bold)});panel.Controls.Add(status);panel.Controls.Add(install);Controls.Add(panel);install.Click+=Install;
     }
@@ -42,7 +42,7 @@ sealed class Installer:Form
         install.Enabled=false;
         try
         {
-            foreach(var p in Process.GetProcessesByName("BMSDepotNext"))using(p)if(!p.HasExited)throw new IOException("실행 중인 BMS Depot 새 버전을 종료하세요.");
+            foreach(var p in Process.GetProcessesByName("BMSDepotNext"))using(p)if(!p.HasExited)throw new IOException("열려 있는 BMS Depot를 닫은 뒤 다시 눌러주세요.");
             var root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","BMSDepotNext");
             status.Text="프로그램을 설치하고 있습니다…";await Task.Run(()=>Program.Extract(root));
             File.WriteAllText(Path.Combine(root,"Uninstall.ps1"),Uninstaller,new UTF8Encoding(true));

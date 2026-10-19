@@ -21,6 +21,8 @@ public sealed class Preferences
     public string Table {get;set;}="Satellite";
     public int KeepDays {get;set;}=14;
     public int LimitGiB {get;set;}=20;
+    public bool SetupComplete {get;set;}
+    public bool FolderRegistered {get;set;}
     public static string Home=>Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"BMSDepotNext");
     public static string FilePath=>Path.Combine(Home,"settings.json");
     public static Preferences Load()=>File.Exists(FilePath)?JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath))??new():new();

@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Depot.Engine;
+using Microsoft.Win32;
 
 namespace Depot.Desktop;
 public sealed record SongRow(Song Song,string Level,string State)
@@ -18,6 +19,8 @@ public partial class Home:Window
     private Preferences settings=new();
     private Catalog? catalog;
     private Library? library;
+    private ExistingLibrary? existing;
+    private HashSet<string> owned=[];
     private HashSet<string> installed=[];
     private bool busy,ready;
     private CancellationTokenSource? downloadCancellation;
@@ -43,6 +46,7 @@ public partial class Home:Window
         settings=Preferences.Load();Capacity.Text=settings.LimitGiB.ToString();Days.Text=settings.KeepDays.ToString();
         catalog=await Catalog.Load(Path.Combine(AppContext.BaseDirectory,"catalog.json"),lifetime.Token);
         library=new(Path.Combine(Preferences.Home,"library"),settings){GameRunning=GameRunning};
+        existing=new(Path.Combine(Preferences.Home,"existing-library.json"));
         library.Changed+=status=>Dispatcher.BeginInvoke(()=>ShowStatus(status));ManagedFolder.Text=SongsRoot;
         var tables=catalog.Songs.SelectMany(s=>s.Tables).Select(t=>t.Table).Distinct().Order().ToList();tables.Insert(0,"전체 카탈로그");
         TableBox.ItemsSource=tables;TableBox.SelectedItem=tables.Contains(settings.Table)?settings.Table:tables[0];
@@ -52,6 +56,8 @@ public partial class Home:Window
     private async Task RefreshInstalled()
     {
         installed=await Task.Run(()=>library!.InstalledHashes());
+        owned=await Task.Run(()=>existing!.Hashes());installed.UnionWith(owned);
+        ExistingSummary.Text=$"기존 곡 폴더 {existing!.Roots.Count}개 · 카탈로그와 일치하는 보유 채보 {catalog!.Songs.Count(s=>owned.Contains(s.Md5)):N0}개";
         var bytes=await Task.Run(()=>library!.UsedBytes);Storage.Text=$"{bytes/1073741824d:N2} / {settings.LimitGiB} GiB · 최대 200 GiB";RefreshList();
     }
     private void RefreshList()
@@ -60,7 +66,7 @@ public partial class Home:Window
         var selectedIds=Songs.SelectedItems.Cast<SongRow>().Select(row=>row.Song.Id).ToHashSet();
         var table=TableBox.SelectedItem as string;var term=Search.Text.Trim();
         var rows=catalog.Songs.Where(s=>(table=="전체 카탈로그"||s.Tables.Any(t=>t.Table==table))&&(term.Length==0||s.Title.Contains(term,StringComparison.OrdinalIgnoreCase)||s.Artist.Contains(term,StringComparison.OrdinalIgnoreCase))&&(InstalledOnly.IsChecked!=true||installed.Contains(s.Md5)))
-            .Select(s=>new SongRow(s,string.Join(", ",s.Tables.Where(t=>table=="전체 카탈로그"||t.Table==table).Select(t=>$"{t.Table} {t.Level}").Distinct()),installed.Contains(s.Md5)?"설치됨":"미설치")).ToList();
+            .Select(s=>new SongRow(s,string.Join(", ",s.Tables.Where(t=>table=="전체 카탈로그"||t.Table==table).Select(t=>$"{t.Table} {t.Level}").Distinct()),owned.Contains(s.Md5)?"기존 보유":installed.Contains(s.Md5)?"설치됨":"미설치")).ToList();
         Songs.ItemsSource=rows;foreach(var row in rows.Where(row=>selectedIds.Contains(row.Song.Id)))Songs.SelectedItems.Add(row);
         Summary.Text=$"{rows.Count:N0}개 채보 · 게임에는 설치가 완료된 실제 곡만 표시됩니다.";UpdateControls();
     }
@@ -76,6 +82,34 @@ public partial class Home:Window
     private void OpenManagedFolder(object sender,RoutedEventArgs e){Directory.CreateDirectory(SongsRoot);Process.Start(new ProcessStartInfo("explorer.exe",SongsRoot){UseShellExecute=true});}
     private async void RefreshLibrary(object sender,RoutedEventArgs e)
     {await Run(async()=>{await RefreshInstalled();Status.Text="설치 상태를 갱신했습니다. 게임에서도 곡 목록을 갱신하세요. OpenLR2는 선곡 화면에서 F8.";});}
+    private async void AddExistingFolder(object sender,RoutedEventArgs e)
+    {
+        if(busy||!ready)return;
+        var dialog=new OpenFolderDialog{Title="기존 BMS 곡이 들어 있는 폴더 선택 (원본은 변경하지 않습니다)"};
+        if(dialog.ShowDialog(this)==true)await ScanExisting(dialog.FolderName);
+    }
+    private async void RescanExisting(object sender,RoutedEventArgs e)=>await ScanExisting(null);
+    private async Task ScanExisting(string? root)
+    {
+        await Run(async()=>
+        {
+            using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+            downloadCancellation=cancellation;UpdateControls();
+            try
+            {
+                if(root is null&&existing!.Roots.Count==0){Status.Text="먼저 기존 곡 폴더를 추가하세요.";return;}
+                Progress.Visibility=Visibility.Visible;Progress.IsIndeterminate=true;Status.Text="기존 채보를 확인합니다…";
+                var result=await Task.Run(()=>existing!.Scan(root,catalog!,new Progress<string>(message=>Dispatcher.BeginInvoke(()=>Status.Text=message)),cancellation.Token));
+                await RefreshInstalled();Status.Text=$"검색 완료 · 채보 {result.Charts:N0}개 / 카탈로그 일치 {result.Matched:N0}개 / 접근 불가·연결 폴더 제외 {result.Skipped:N0}개. 기존 곡 폴더의 게임 등록은 그대로 유지하세요.";
+            }
+            finally{downloadCancellation=null;UpdateControls();}
+        });
+    }
+    private void OpenExistingFolder(object sender,RoutedEventArgs e)
+    {
+        if(Songs.SelectedItem is not SongRow row)return;var path=existing?.PathFor(row.Song.Md5);if(path is null)return;
+        Process.Start(new ProcessStartInfo("explorer.exe",Path.GetDirectoryName(path)!){UseShellExecute=true});
+    }
     private async void OrganizeLibrary(object sender,RoutedEventArgs e)
     {
         if(GameRunning()){Status.Text="기존 폴더를 재구성하려면 게임을 종료하세요. 새 곡 다운로드는 게임 중에도 가능합니다.";return;}
@@ -94,7 +128,7 @@ public partial class Home:Window
         {
             using var cancellation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
             downloadCancellation=cancellation;UpdateControls();
-            var completed=0;var failures=new List<string>();var cancelled=false;
+            var completed=0;var reused=0;var failures=new List<string>();var cancelled=false;
             try
             {
                 for(var index=0;index<selected.Count;index++)
@@ -103,6 +137,8 @@ public partial class Home:Window
                     var row=selected[index];queueProgress=$"[{index+1}/{selected.Count}] {row.Title} · ";
                     try
                     {
+                        var local=await existing!.Find(row.Song,cancellation.Token);
+                        if(local is not null){completed++;reused++;continue;}
                         var chart=await library!.Ensure(row.Song,cancellation.Token);
                         await library.PublishFolders(row.Song,chart,selectedTable=="전체 카탈로그"?null:selectedTable,cancellation.Token);completed++;
                     }
@@ -112,7 +148,7 @@ public partial class Home:Window
                 }
                 await RefreshInstalled();
                 var pending=selected.Count-completed-failures.Count;
-                Status.Text=$"{(cancelled?"취소됨":"처리 완료")} · 완료 {completed} / 실패 {failures.Count} / 미처리 {pending} · 게임 목록을 갱신하세요. OpenLR2는 선곡 화면에서 F8.";
+                Status.Text=$"{(cancelled?"취소됨":"처리 완료")} · 완료 {completed} (기존 곡 재사용 {reused}) / 실패 {failures.Count} / 미처리 {pending} · 기존 곡은 원래 폴더에서, 새 곡은 Depot 폴더에서 플레이하세요.";
                 if(failures.Count>0)
                 {
                     Error.Text=string.Join("\n\n",failures);ErrorPanel.Visibility=Visibility.Visible;
@@ -123,7 +159,7 @@ public partial class Home:Window
         });
     }
     private void CancelDownload(object sender,RoutedEventArgs e)
-    {downloadCancellation?.Cancel();Status.Text="취소 요청 중 · 완료된 곡은 유지하고 남은 다운로드를 중단합니다.";UpdateControls();}
+    {downloadCancellation?.Cancel();Status.Text="취소 요청 중 · 완료된 곡과 기존 검색 기록은 유지합니다.";UpdateControls();}
     private async void SaveSettings(object sender,RoutedEventArgs e)
     {
         await Run(async()=>
@@ -141,11 +177,12 @@ public partial class Home:Window
         Status.Text=queueProgress+status.Message+(status.Total is >0?$" · {status.Received/1048576d:N1} / {status.Total.Value/1048576d:N1} MiB":"");
     }
     private void UpdateControls()
-    {if(DownloadButton is null||CancelButton is null)return;DownloadButton.IsEnabled=ready&&!busy&&Songs.SelectedItems.Count>0;SaveButton.IsEnabled=ready&&!busy;RefreshButton.IsEnabled=ready&&!busy;OrganizeButton.IsEnabled=ready&&!busy;DownloadButton.Content=Songs.SelectedItems.Count>1?$"선택한 {Songs.SelectedItems.Count}개 순서대로 받기":Songs.SelectedItem is SongRow row&&installed.Contains(row.Song.Md5)?"설치 확인·폴더 연결":"선택한 곡 다운로드";CancelButton.Visibility=downloadCancellation is null?Visibility.Collapsed:Visibility.Visible;CancelButton.IsEnabled=downloadCancellation?.IsCancellationRequested==false;}
+    {if(DownloadButton is null||CancelButton is null)return;DownloadButton.IsEnabled=ready&&!busy&&Songs.SelectedItems.Count>0;SaveButton.IsEnabled=ready&&!busy;RefreshButton.IsEnabled=ready&&!busy;OrganizeButton.IsEnabled=ready&&!busy;AddExistingButton.IsEnabled=ready&&!busy;RescanButton.IsEnabled=ready&&!busy;OpenExistingButton.IsEnabled=ready&&Songs.SelectedItem is SongRow selected&&owned.Contains(selected.Song.Md5);DownloadButton.Content=Songs.SelectedItems.Count>1?$"선택한 {Songs.SelectedItems.Count}개 순서대로 받기":Songs.SelectedItem is SongRow row&&owned.Contains(row.Song.Md5)?"보유곡 확인":Songs.SelectedItem is SongRow cached&&installed.Contains(cached.Song.Md5)?"설치 확인·폴더 연결":"선택한 곡 다운로드";CancelButton.Visibility=downloadCancellation is null?Visibility.Collapsed:Visibility.Visible;CancelButton.IsEnabled=downloadCancellation?.IsCancellationRequested==false;}
     private async Task Run(Func<Task> action)
     {
         if(busy)return;busy=true;ErrorPanel.Visibility=Visibility.Collapsed;UpdateControls();
         try{await action();}
+        catch(OperationCanceledException){Status.Text="작업을 취소했습니다. 이전 검색 기록과 완료된 다운로드는 유지됩니다.";}
         catch(Exception ex){Status.Text="작업을 완료하지 못했습니다.";Error.Text=ex.Message;ErrorPanel.Visibility=Visibility.Visible;Directory.CreateDirectory(Preferences.Home);await File.AppendAllTextAsync(Path.Combine(Preferences.Home,"errors.log"),DateTimeOffset.Now+"\n"+ex+"\n");}
         finally{busy=false;Progress.Visibility=Visibility.Collapsed;UpdateControls();}
     }

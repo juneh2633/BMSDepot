@@ -1,4 +1,4 @@
-param([string]$Version='0.1.0-alpha.1')
+param([string]$Version='0.1.0-alpha.2')
 $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$'){throw '잘못된 버전 형식'}
 $repoRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))

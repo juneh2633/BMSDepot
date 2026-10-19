@@ -17,5 +17,6 @@ next/setup/
 !.env.example
 settings.json
 folder-index.json
+existing-library.json
 library/
 player/
